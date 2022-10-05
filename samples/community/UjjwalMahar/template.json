@@ -1,0 +1,35 @@
+{
+  "dimensions": [
+    1200,
+    1000
+  ],
+  "bubbleDimensions": [ 10, 10],
+  "preProcessors": [
+    {
+      "name": "ExtractPhoto",
+      "options": {
+        "morphKernel": [
+          10,
+          10
+        ]
+      }
+    }
+  ],
+  "concatenations": {},
+  "singles": [
+    "dummy"
+  ],
+  "qBlocks": {
+    "dummy": {
+      "qType": "QTYPE_MED",
+      "orig": [ 10, 10 ],
+      "qNos": [
+        [
+          [ "q1", "q2", "q3", "q4", "q5", "q6" ]
+        ]
+      ],
+      "gaps": [ 10, 10 ],
+      "bigGaps": [ 10, 10 ]
+    }
+  }
+}
