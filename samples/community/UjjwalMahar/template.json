@@ -11,7 +11,10 @@
         "morphKernel": [
           10,
           10
-        ]
+        ],
+        "fileSuffix" : "_extract",
+        "areaDimensions": [400, 400],
+        "areaOrigin" : [200, 300]
       }
     }
   ],
