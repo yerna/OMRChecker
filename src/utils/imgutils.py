@@ -48,10 +48,21 @@ class ImageUtils:
             and ImageUtils.save_img_list[key] != []
         ):
             name = os.path.splitext(filename)[0]
+
+            def process_image_for_stack(img):
+                img = ImageUtils.resize_util_h(img, config.dimensions.display_height)
+                
+                # Note: grayscale images return only height and widthqq
+                if(len(img.shape) > 2): 
+                    print(img.shape);
+                    # todo: check whether current type is BGR or RGB
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                return img
+
             result = np.hstack(
                 tuple(
                     [
-                        ImageUtils.resize_util_h(img, config.dimensions.display_height)
+                        process_image_for_stack(img)
                         for img in ImageUtils.save_img_list[key]
                     ]
                 )
@@ -574,7 +585,7 @@ class MainOperations:
             if resize
             else orig
         )
-        cv2.imshow(name, img)
+        
         if resetpos:
             MainOperations.image_metrics.window_x = resetpos[0]
             MainOperations.image_metrics.window_y = resetpos[1]
@@ -601,6 +612,13 @@ class MainOperations:
                 MainOperations.image_metrics.window_y += h
         else:
             MainOperations.image_metrics.window_x += w
+        
+        # Normalize the image if it is not 0-255
+        if img.dtype != "uint8":
+            logger.info(f"Note: '{img.dtype}' image will be normalized into 'uint8' for display. Name: {name}")
+            img = cv2.normalize(img, None, 255,0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+
+        cv2.imshow(name, img)
 
         if pause:
             logger.info(
@@ -621,8 +639,13 @@ class MainOperations:
             if img.max() > img.min():
                 img = normalize_util(img)
             # Processing copies
-            transp_layer = img.copy()
-            final_marked = img.copy()
+            final_marked = np.array(img, dtype=np.float32)
+            
+            final_marked = cv2.cvtColor(final_marked, cv2.COLOR_GRAY2RGB)
+            MainOperations.show("final_marked", final_marked, 1, 1)
+            
+            transp_layer = final_marked.copy()
+
             # put_label(final_marked,"Crop Size: " +
             #   str(origDim[0])+"x"+str(origDim[1]) + " "+name, size=1)
 
@@ -916,9 +939,6 @@ class MainOperations:
                         # TODO Make this part useful! (Abstract visualizer to check status)
                         if detected:
                             q, val = pt.q_no, str(pt.val)
-                            final_marked=cv2.merge([final_marked,final_marked,final_marked])
-                            final_marked=cv2.cvtColor(final_marked,cv2.COLOR_GRAY2RGB)
-
                             cv2.putText(
                                 final_marked,
                                 val,
