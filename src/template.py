@@ -13,7 +13,7 @@ import numpy as np
 
 from src.logger import logger
 
-from .constants import QTYPE_DATA, TEMPLATE_DEFAULTS_PATH
+from .constants import QTYPE_DATA, SCHEMA_DEFAULTS_PATH, TEMPLATE_DEFAULTS_PATH
 from .utils.file import load_json, validate_json
 from .utils.object import OVERRIDE_MERGER
 
@@ -23,17 +23,17 @@ TEMPLATE_DEFAULTS = load_json(TEMPLATE_DEFAULTS_PATH)
 def open_template_with_defaults(template_path):
     user_template = load_json(template_path)
     user_template = OVERRIDE_MERGER.merge(deepcopy(TEMPLATE_DEFAULTS), user_template)
-    is_valid, msg = validate_json(user_template, template_path)
+    is_valid, msg = validate_json(user_template)
 
     if is_valid:
         logger.info(msg)
         return user_template
     else:
-        logger.critical(msg, "\nExiting program")
+        logger.critical(msg, "exiting program")
         exit()
 
 
-# Coordinates Part
+# Coordinates Part #
 class Pt:
     """
     Container for a Point Box on the OMR
@@ -85,6 +85,14 @@ class Template:
             extensions[p["name"]](p["options"], template_path.parent)
             for p in json_obj.get("preProcessors", [])
         ]
+        # load the barcode reader info
+        self.TemplateByBarcode = [
+            extensions[p["name"]](p["options"], template_path.parent)
+            for p in json_obj.get("TemplateByBarcode", [])
+        ]
+        self.name = []
+        for p in json_obj.get("preProcessors", []):
+            self.name.append(p["name"])
 
         # Add options
         self.options = json_obj.get("options", {})

@@ -22,14 +22,15 @@ from src import constants
 # TODO: use open_config_with_defaults after making a Config class.
 from src.config import CONFIG_DEFAULTS as config
 from src.logger import logger
-
-# TODO: further break utils down and separate the imports
 from src.utils.imgutils import (
     ImageUtils,
     MainOperations,
     draw_template_layout,
     setup_dirs,
 )
+
+# TODO: further break utils down and separate the imports
+from src.utils.TemplateByBarcode import TemplateByBarcode
 
 # Note: dot-imported paths are relative to current directory
 from .processors.manager import ProcessorManager
@@ -56,6 +57,7 @@ def entry_point(root_dir, curr_dir, args):
 def process_dir(root_dir, curr_dir, args, template=None):
 
     # Update local template (in current recursion stack)
+
     local_template_path = curr_dir.joinpath(constants.TEMPLATE_FILENAME)
     if os.path.exists(local_template_path):
         template = Template(local_template_path, PROCESSOR_MANAGER.processors)
@@ -108,7 +110,7 @@ def process_dir(root_dir, curr_dir, args, template=None):
 
         setup_dirs(paths)
         out = setup_output(paths, template)
-        process_files(omr_files, template, args_local, out)
+        process_files(omr_files, template, args_local, out, curr_dir, root_dir)
 
     elif not subdirs:
         # Each subdirectory should have images or should be non-leaf
@@ -192,6 +194,7 @@ def setup_output(paths, template):
         list(template.concatenations.keys()) + template.singles,
         key=lambda x: int(x[1:]) if ord(x[1]) in range(48, 58) else 0,
     )
+
     ns.empty_resp = [""] * len(ns.resp_cols)
     ns.sheetCols = ["file_id", "input_path", "output_path", "score"] + ns.resp_cols
     ns.OUTPUT_SET = []
@@ -248,12 +251,15 @@ def preliminary_check():
     #     show("Confirm : All bubbles are black",final_marked,1,1)
 
 
+
+
 # TODO: take a look at 'out.paths'
-def process_files(omr_files, template, args, out):
+def process_files(omr_files, template, args, out, curr_dir, root_dir):
     start_time = int(time())
     files_counter = 0
     STATS.files_not_moved = 0
-
+    temp_template = template
+    PROCESSOR_MANAGER = ProcessorManager()
     for file_path in omr_files:
         files_counter += 1
 
@@ -277,6 +283,11 @@ def process_files(omr_files, template, args, out):
             config.dimensions.processing_width,
             config.dimensions.processing_height,
         )
+        out_1 = out
+        if template.TemplateByBarcode != []:
+            template, out = TemplateByBarcode.TemplateBarcode(
+                in_omr, template, out, file_name, args, PROCESSOR_MANAGER,curr_dir, root_dir
+            )
 
         # run pre_processors in sequence
         for pre_processor in template.pre_processors:
@@ -320,6 +331,7 @@ def process_files(omr_files, template, args, out):
         # concatenate roll nos, set unmarked responses, etc
         resp = process_omr(template, response_dict)
         logger.info("\nRead Response: \t", resp, "\n")
+        logger.info(" f ", multi_marked)
         if config.outputs.show_image_level >= 2:
             MainOperations.show(
                 "Final Marked Bubbles : " + file_id,
@@ -340,7 +352,7 @@ def process_files(omr_files, template, args, out):
             resp_array.append(resp[k])
 
         out.OUTPUT_SET.append([file_name] + resp_array)
-
+        template = temp_template
         # TODO: Add roll number validation here
         if multi_marked == 0:
             STATS.files_not_moved += 1
@@ -380,7 +392,7 @@ def process_files(omr_files, template, args, out):
             # else:
             #     TODO:  Add appropriate record handling here
             #     pass
-
+        out = out_1
     print_stats(start_time, files_counter)
 
     # flush after every 20 files for a live view

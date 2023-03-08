@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 
 from .interfaces.ImagePreprocessor import ImagePreprocessor
-
+from pyzbar.pyzbar import decode
+from src.logger import logger
+import os
 
 class Levels(ImagePreprocessor):
     def __init__(self, options, _args):
@@ -13,7 +15,7 @@ class Levels(ImagePreprocessor):
                 return 255
             inv_gamma = 1.0 / gamma
             return (((value - low) / (high - low)) ** inv_gamma) * 255
-
+            
         self.gamma = np.array(
             [
                 output_level(
@@ -32,16 +34,18 @@ class Levels(ImagePreprocessor):
 
 class MedianBlur(ImagePreprocessor):
     def __init__(self, options, _args):
-        self.kSize = int(options.get("kSize", 5))
+        self.kSize = options.get("kSize", 5)
 
     def apply_filter(self, image, _args):
-        return cv2.medianBlur(image, self.kSize)
+        return cv2.medianBlur(
+                            image,
+                            self.kSize)
 
 
 class GaussianBlur(ImagePreprocessor):
-    def __init__(self, options, _args):
-        self.kSize = tuple(int(x) for x in options.get("kSize", (3, 3)))
-        self.sigmaX = int(options.get("sigmaX", 0))
-
     def apply_filter(self, image, _args):
-        return cv2.GaussianBlur(image, self.kSize, self.sigmaX)
+        return cv2.GaussianBlur(
+            image,
+            tuple(self.options.get("kSize", (3, 3))),
+            self.options.get("sigmax", 0),
+        )
